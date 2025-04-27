@@ -19,6 +19,37 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.phonepe.dataplatform</groupId>
+            <artifactId>severus-client</artifactId>
+            <version>1.5.16</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.phonepe.platform</groupId>
+            <artifactId>moses-model</artifactId>
+            <version>1.0.60</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.phonepe.platform</groupId>
+            <artifactId>spyglass-service-models</artifactId>
+            <version>2.0.110-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.phonepe.platform</groupId>
+            <artifactId>spyglass-service-health</artifactId>
+            <version>2.0.110-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.phonepe.devx</groupId>
+            <artifactId>saarthi-models</artifactId>
+            <version>1.12-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>com.phonepe.sentinel-ai</groupId>
             <artifactId>sentinel-ai-core</artifactId>

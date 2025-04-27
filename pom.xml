@@ -87,6 +87,18 @@
         <jackson.version>2.18.3</jackson.version>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>phonepe-releases</id>
+            <url>https://artifactory.phonepe.com/repository/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>phonepe-snapshots</id>
+            <url>https://artifactory.phonepe.com/repository/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+
     <dependencyManagement>
         <dependencies>
             <dependency>
