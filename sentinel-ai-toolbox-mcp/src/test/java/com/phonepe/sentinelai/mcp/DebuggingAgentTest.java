@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.models;
+package com.phonepe.sentinelai.mcp;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -42,6 +42,7 @@ import com.phonepe.platform.spyglass.service.models.response.SpyGlassResponse;
 import com.phonepe.sentinelai.core.agent.Agent;
 import com.phonepe.sentinelai.core.agent.AgentExtension;
 import com.phonepe.sentinelai.core.agent.AgentInput;
+import com.phonepe.sentinelai.core.agent.AgentOutput;
 import com.phonepe.sentinelai.core.agent.AgentRequestMetadata;
 import com.phonepe.sentinelai.core.agent.AgentSetup;
 import com.phonepe.sentinelai.core.events.EventBus;
@@ -49,6 +50,8 @@ import com.phonepe.sentinelai.core.model.ModelSettings;
 import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
+import com.phonepe.sentinelai.mcp.debugging.GrafanaMCPToolTest;
+import com.phonepe.sentinelai.models.SimpleOpenAIModel;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
 import io.github.sashirestela.openai.SimpleOpenAI;
 import lombok.Builder;
@@ -82,8 +85,7 @@ import java.util.Set;
 public class DebuggingAgentTest {
 
     private static final String AUTH_HEADER =
-        "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiMjdhZjBkYTYtMjlhMi00ZDFlLTk3NTYtYjcyMTA5ZWNhYzIyIiwic2lkIjoiMGJmMWQ4YTItM2VmMy00YzU4LTkwZTEtMjFkZjIxZDUwMTYyIiwiaWF0IjoxNzQ1NzY1MzYyLCJleHAiOjE3NDU4NTE3NjJ9.Wo4_3-aW-hZGkQvSaaGJlXau7-x3wwf9eorv45rgLGA2cgQgdT8UIQBK13Uxeaii2F2k4YvHCsQ2pAVuMUXbQA";
-
+            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiMmIyZTg4ZDktZDMwNS00N2JkLTk1M2UtYmI2YjJlOWIzY2Y5Iiwic2lkIjoiNzdjNzhjYWItODYzNy00ZDkxLThiMWYtOTJjZWUzYjM5NWQ4IiwiaWF0IjoxNzQ1ODU2NDAzLCJleHAiOjE3NDU5NDI4MDJ9.8uFiyjLUDJZmMcJNfdv2gDKgmckQn8HkgiQEpZxhFuiJm9NBIXy-NM-UPKKXjVQkXr9ek98oTs8735kqO8yXEw";
     private static final String STAGE_AUTH_HEADER =
             "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiYzJmMTdkY2EtYzIyNi00YmEzLWIwMTgtYjUxOGEzYmZhOTJkIiwic2lkIjoiNWE1YjQ1MTgtYjAwMC00ZjQ3LWIwNGYtZGQ5OWY4YTNjM2QyIiwiaWF0IjoxNzQ1NzY1NDY4LCJleHAiOjE3NDYzNzAyNjh9.rpYdeMNEplTMQIaAZBBD8MLrTFUWYXUKWnh8sb8UGvJ1ijNzWXD0vB7z72CKDlOMOAYVLRnA9NLlGOjdYFRe6A";
 
@@ -151,13 +153,15 @@ public class DebuggingAgentTest {
                             You are a debugging agent. Here are the list of tasks which you need to perform
                             1. Check for top anomalous apis for the provided service for the given time period using service status tool
                             2. Check the root cause for top 3 identified anomalous api names. Send service name as app and api path as "name" to the spyglass RCA tool
-                            3. Check the elapsed time metric of the provided service using foxtrot tool. 
-                               Compare the current interval result with historical data returned in foxtrot response. 
+                            3. Check the elapsed time metric of the provided service using foxtrot tool.
+                               Compare the current interval result with historical data returned in foxtrot response.
                             4. If there is an anomaly in foxtrot tool data, send the user input query string to vector DB
                             5. Summarize the vector DB results and highlight the remediation measures or possible causes mentioned in the results
-                            6. Analyse the RCA response, elapsed time metrics response analysis, vector DB results and summarise the issues. 
+                            6. Analyse the RCA response, elapsed time metrics response analysis, vector DB results and summarise the issues.
                             Summarize the vector DB response and highlight the remediation measures or possible causes. Also suggest any actions which need to be taken for handling
-                            the issue
+                            the issue. List the dashboard (grafana and foxtrot) links to be used.
+                            7. With the grafana dashboards, further debug the issue by checking the metrics of grafana links/dashboards using the grafanaMcp tool.
+                            Use these metric data to summarize the issue
                             """,
                     agentSetup, extensions, tools);
         }
@@ -165,6 +169,12 @@ public class DebuggingAgentTest {
         @Override
         public String name() {
             return "test-agent";
+        }
+
+        @Tool("This tool can used to fetch metric data from grafana mcp")
+        public void grafanaMcp() {
+          //  log.info("Link: {}", link);
+            new GrafanaMCPToolTest().test();
         }
 
         @Tool("This tool can be used for checking anomalies in the application metrics for a given time period")
@@ -315,9 +325,6 @@ public class DebuggingAgentTest {
             val response = httpClientWithProxy.newCall(request).execute();
             log.info("Foxtrot response code: {}", response.code());
             val responseString = response.body().string();
-
-            log.info("Response: {}", responseString);
-
             val actionResponse = objectMapper.readValue(responseString, new TypeReference<StatsTrendResponse>() {
             });
             return actionResponse.getResult();

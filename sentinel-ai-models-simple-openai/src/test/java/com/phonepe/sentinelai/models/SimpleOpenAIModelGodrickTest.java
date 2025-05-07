@@ -5,11 +5,12 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.google.common.net.HttpHeaders;
 import com.phonepe.sentinelai.core.agent.Agent;
 import com.phonepe.sentinelai.core.agent.AgentExtension;
+import com.phonepe.sentinelai.core.agent.AgentInput;
 import com.phonepe.sentinelai.core.agent.AgentRequestMetadata;
 import com.phonepe.sentinelai.core.agent.AgentSetup;
 import com.phonepe.sentinelai.core.events.EventBus;
 import com.phonepe.sentinelai.core.model.ModelSettings;
-import com.phonepe.sentinelai.core.tools.CallableTool;
+import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
@@ -26,8 +27,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +50,7 @@ class SimpleOpenAIModelGodrickTest {
 
     public static class SimpleAgent extends Agent<UserInput, OutputObject, SimpleAgent> {
         @Builder
-        public SimpleAgent(AgentSetup setup, List<AgentExtension> extensions, Map<String, CallableTool> tools) {
+        public SimpleAgent(AgentSetup setup, List<AgentExtension> extensions, Map<String, ExecutableTool> tools) {
             super(OutputObject.class, "greet the user", setup, extensions, tools);
         }
 
@@ -137,18 +136,19 @@ class SimpleOpenAIModelGodrickTest {
                 .sessionId("s1")
                 .userId("ss")
                 .build();
-        final var response = agent.execute(new UserInput("Hi"),
-                requestMetadata,
-                null,
-                null);
+        final var response = agent.execute(AgentInput.<UserInput>builder()
+                        .request(new UserInput("Hi"))
+                        .requestMetadata(requestMetadata)
+                .build());
         log.info("Agent response: {}", response.getData());
 
 
         final var response2 = agent.execute(
-                new UserInput("What is my name?"),
-                requestMetadata,
-                response.getAllMessages(),
-                null);
+                AgentInput.<UserInput>builder()
+                        .request(new UserInput("What is my name?"))
+                        .requestMetadata(requestMetadata)
+                        .oldMessages(response.getAllMessages())
+                        .build());
         log.info("Second call: {}", response2.getData());
         log.debug("Messages: {}", objectMapper.writerWithDefaultPrettyPrinter()
                 .writeValueAsString(response2.getAllMessages()));

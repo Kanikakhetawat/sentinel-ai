@@ -24,12 +24,24 @@
             <groupId>com.phonepe.dataplatform</groupId>
             <artifactId>severus-client</artifactId>
             <version>1.5.16</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>jackson-module-afterburner</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>com.phonepe.platform</groupId>
             <artifactId>moses-model</artifactId>
             <version>1.0.60</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.module</groupId>
+                    <artifactId>jackson-module-afterburner</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
