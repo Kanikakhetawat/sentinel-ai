@@ -100,7 +100,6 @@ public class GrafanaMCPToolTest {
 //                    .hostnameVerifier((hostname, session) -> true)
 //                    .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
 //                            .removeHeader(HttpHeaders.AUTHORIZATION)
-//                            .header(HttpHeaders.AUTHORIZATION, "Bearer eyJrIjoicDZDRDc0NFJsbEU1ZGlqVWZtdDg3MWFab1JvcEd4c1oiLCJuIjoidGVzdF9tY3AiLCJpZCI6MX0=")
 //                            .build()))
 //                    .callTimeout(Duration.ofSeconds(180))
 //                    .connectTimeout(Duration.ofSeconds(120))
@@ -176,8 +175,7 @@ public class GrafanaMCPToolTest {
         );
 
         final var params = ServerParameters.builder("/Users/kanika.khetawat/mcp-grafana")
-                .env(Map.of("GRAFANA_URL", "http://prd-grafana001.phonepe.nm5",
-                        "GRAFANA_API_KEY", "eyJrIjoicDZDRDc0NFJsbEU1ZGlqVWZtdDg3MWFab1JvcEd4c1oiLCJuIjoidGVzdF9tY3AiLCJpZCI6MX0="))
+                .env(Map.of("GRAFANA_URL", "http://prd-grafana001.phonepe.nm5"))
                 .args("--disable-prometheus", "--disable-oncall", "--disable-alerting", "--disable-loki",
                         "--disable-incident")
                 .build();
