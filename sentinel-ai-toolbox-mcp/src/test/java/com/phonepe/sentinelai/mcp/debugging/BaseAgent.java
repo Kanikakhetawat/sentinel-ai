@@ -54,17 +54,22 @@ public class BaseAgent extends BaseTest {
             super(String.class,
                     """
                             You are a debugging agent. Here are the list of tasks which you need to perform. Please make sure to perform each individual step
-                            Step 1. Run ServiceHealth Agent to identify any issues with the service
+                            Step 1. Run ServiceHealth tool to identify any issues with the service. For each anomalous API, run RCA tool to identify the issue
                             Step 2. Check critical business metrics performance using the business metric health tool
-                            Step 3. For each identified service metric issue, query vector DB tool. Send the metric which is having issue in the query
-                            to vectorDB
-                            Step 4. For each business metric, query vector DB tool. Send the key in the map which is having the issue in the
-                            query to vectorDB. This step has to be run after step (2)
-                            Step 5. After step (4) and (5), combine all the results and show following:
-                              a. Service level degradation, possible reasons, all the things to check and all relevant grafana,foxtrot, confluence links
-                              b. Business level degradation, possible reasons, all the things to check and all relevant grafana,foxtrot, confluence links
+                            Step 3. This step has to be run after step (2). For each business metric check the following:
+                                 a. Check if there is a huge deviation from usual values.
+                                 b. For these metrics, send the key in the map which is having the issue in the query to vectorDB.     
+                            Step 4. After step (4) and (5), combine all the results and show following:
+                              a. Service level degradation, apis which are degraded and for each its root cause identified
+                              b. Business level degradation
+                                   (i). Metrics which are anomalous. Show the usual values and the current value
+                                   (ii). Possible reasons
+                                   (iii). All the things to check and all relevant grafana,foxtrot, confluence links
                             """,
                     agentSetup, extensions, tools);
+
+            // Step 3. For each identified service metric issue, query vector DB tool. Send the metric which is having issue in the query
+            //                            to vectorDB
         }
 
         @Override
@@ -72,21 +77,21 @@ public class BaseAgent extends BaseTest {
             return "base-agent";
         }
 
-        @Tool("Tool to execute service health agent tool")
-        public List<AgentMessage> serviceHealthTool() {
-            return new ServiceHealthAgent().test();
-        }
-
-        @Tool("Tool to execute business metric health agent tool")
-        public List<AgentMessage> businessMetricHealthTool() {
-            return new BusinessMetricHealthAgent().test();
-        }
-
-        @Tool("Tool to execute vector DB agent")
-        public VectorDBAgentResponse vectorDBQueryTool(final String query) {
-            log.info("Query to vector DB: {}", query);
-            return new VectorDBQueryAgent().test(query);
-        }
+//        @Tool("Tool to execute service health agent tool")
+//        public List<AgentMessage> serviceHealthTool() {
+//            return new ServiceHealthAgent().test();
+//        }
+//
+//        @Tool("Tool to execute business metric health agent tool")
+//        public List<AgentMessage> businessMetricHealthTool() {
+//            return new BusinessMetricHealthAgent().test();
+//        }
+//
+//        @Tool("Tool to execute vector DB agent")
+//        public VectorDBAgentResponse vectorDBQueryTool(final String query) {
+//            log.info("Query to vector DB: {}", query);
+//            return new VectorDBQueryAgent().test(query);
+//        }
 
         @Tool("Tool to query grafana agent")
         public void grafanaTool(final String url,
@@ -152,7 +157,11 @@ public class BaseAgent extends BaseTest {
                                 .build())
                         .eventBus(eventBus)
                         .build())
+                .tools(Map.of())
                 .build();
+
+        agent.registerToolboxes(List.of(new ServiceHealthAgent(), new BusinessMetricHealthAgent(),
+                new VectorDBQueryAgent()));
 
 
         final var requestMetadata = AgentRequestMetadata.builder()
@@ -160,11 +169,19 @@ public class BaseAgent extends BaseTest {
                 .userId("ss")
                 .build();
 
+//        final var response = agent.execute(AgentInput.<UserInput>builder()
+//                .request(new UserInput("""
+//                        Payment service health
+//                        """, "payment",
+//                        1745899680000L, 1745899980000L))
+//                .requestMetadata(requestMetadata)
+//                .build());
+
         final var response = agent.execute(AgentInput.<UserInput>builder()
                 .request(new UserInput("""
-                        Is there any issue in payment service on prod
+                        Payment service health
                         """, "payment",
-                        1745899680000L, 1745899980000L))
+                        1747053600000L, 1747053900000L))
                 .requestMetadata(requestMetadata)
                 .build());
 
