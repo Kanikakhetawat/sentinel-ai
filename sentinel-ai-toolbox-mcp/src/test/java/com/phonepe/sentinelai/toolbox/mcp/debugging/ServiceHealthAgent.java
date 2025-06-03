@@ -1,9 +1,8 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.net.HttpHeaders;
 import com.phonepe.platform.spyglass.service.health.data.widgets.WidgetType;
 import com.phonepe.platform.spyglass.service.health.data.widgets.metric.request.WidgetMetricRequest;
 import com.phonepe.platform.spyglass.service.health.data.widgets.metric.request.WidgetRequest;
@@ -17,41 +16,19 @@ import com.phonepe.platform.spyglass.service.models.request.OpDirection;
 import com.phonepe.platform.spyglass.service.models.request.impl.RCAGraphRequest;
 import com.phonepe.platform.spyglass.service.models.response.GraphResponseV2;
 import com.phonepe.platform.spyglass.service.models.response.SpyGlassResponse;
-import com.phonepe.sentinelai.core.agent.Agent;
-import com.phonepe.sentinelai.core.agent.AgentExtension;
-import com.phonepe.sentinelai.core.agent.AgentInput;
-import com.phonepe.sentinelai.core.agent.AgentRequestMetadata;
-import com.phonepe.sentinelai.core.agent.AgentSetup;
-import com.phonepe.sentinelai.core.agentmessages.AgentMessage;
-import com.phonepe.sentinelai.core.events.EventBus;
-import com.phonepe.sentinelai.core.model.ModelSettings;
-import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.tools.ToolBox;
-import com.phonepe.sentinelai.core.utils.JsonUtils;
-import com.phonepe.sentinelai.mcp.MetricTypeKeyDeserializer;
-import com.phonepe.sentinelai.mcp.TimeRangeKeyDeserializer;
-import com.phonepe.sentinelai.mcp.debugging.BaseTest;
-import com.phonepe.sentinelai.models.SimpleOpenAIModel;
-import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
-import io.github.sashirestela.openai.SimpleOpenAI;
-import lombok.Builder;
-import lombok.NonNull;
+import com.phonepe.sentinelai.toolbox.mcp.MetricTypeKeyDeserializer;
+import com.phonepe.sentinelai.toolbox.mcp.TimeRangeKeyDeserializer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -76,6 +53,9 @@ public class ServiceHealthAgent extends BaseTest implements ToolBox {
     @Tool("This tool can be used for checking anomalies in the application metrics for a given time period")
     @SneakyThrows
     public List<WidgetElement> getServiceStatus(final UserInput userInput) {
+
+
+
         SimpleModule module = new SimpleModule();
         module.addKeyDeserializer(TimeRange.class, new TimeRangeKeyDeserializer());
         objectMapper.registerModule(module);

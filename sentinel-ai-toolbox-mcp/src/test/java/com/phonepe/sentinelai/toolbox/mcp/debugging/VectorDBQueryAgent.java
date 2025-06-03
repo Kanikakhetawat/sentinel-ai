@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.net.HttpHeaders;
@@ -58,17 +58,6 @@ public class VectorDBQueryAgent extends BaseTest implements ToolBox {
                                                 .field("metadata.source_id")
                                                 .values(List.of("fa8c970a74d187435234"))
                                                 .build()))
-//                                        BoolQuery.builder()
-//                                                .shouldClauses(List.of(TermsQuery.builder()
-//                                                                .field("metadata.id")
-//                                                                .values(List.of("82090582", "113662758"))
-//                                                                .build(),
-//                                                        TermsQuery.builder()
-//                                                                .field("metadata.ancestors.ancestors.id")
-//                                                                .values(List.of("124796757", "26577892"))
-//                                                                .build()))
-//                                                .minimumMatch("1")
-//                                                .build()))
                                 .mustClauses(List.of(MatchQuery.builder()
                                         .field("text")
                                         .value(query)

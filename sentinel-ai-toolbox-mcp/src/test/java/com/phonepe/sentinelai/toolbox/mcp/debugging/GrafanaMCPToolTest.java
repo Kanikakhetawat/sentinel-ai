@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -12,8 +12,8 @@ import com.phonepe.sentinelai.core.model.ModelSettings;
 import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
-import com.phonepe.sentinelai.mcp.MCPToolBox;
 import com.phonepe.sentinelai.models.SimpleOpenAIModel;
+import com.phonepe.sentinelai.toolbox.mcp.MCPToolBox;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
 import io.github.sashirestela.openai.SimpleOpenAI;
 import io.modelcontextprotocol.client.McpClient;

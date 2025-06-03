@@ -1,7 +1,6 @@
 package com.phonepe.sentinelai.models;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -21,11 +20,6 @@ import com.phonepe.commons.columbus.search.query.term.TermsQuery;
 import com.phonepe.commons.columbus.search.query.text.MatchQuery;
 import com.phonepe.dataplatform.severus.model.columbus.KnnQuery;
 import com.phonepe.dataplatform.severus.model.request.DocSearchRequest;
-import com.phonepe.devx.saarthi.models.SaarthiResponse;
-import com.phonepe.devx.saarthi.models.datasource.DataSource;
-import com.phonepe.devx.saarthi.models.dto.search.request.SearchRequest;
-import com.phonepe.devx.saarthi.models.dto.search.response.SearchResponse;
-import com.phonepe.devx.saarthi.models.dto.search.response.post.Post;
 import com.phonepe.platform.spyglass.service.health.data.widgets.WidgetType;
 import com.phonepe.platform.spyglass.service.health.data.widgets.metric.request.WidgetMetricRequest;
 import com.phonepe.platform.spyglass.service.health.data.widgets.metric.request.WidgetRequest;
@@ -213,29 +207,29 @@ public class DebuggingAgentTest {
             return widgetElements;
         }
 
-        @Tool(value = "This tool is responsible for searching multiple data sources to find matches for a given input query")
-        @SneakyThrows
-        public List<Post> search(@JsonPropertyDescription("Query to find results against") final String query) {
-            log.info("Searching for: {}", query);
-            final var objectMapper = JsonUtils.createMapper();
-            RequestBody requestBody =
-                    RequestBody.create(objectMapper
-                                    .writeValueAsBytes(SearchRequest.builder()
-                                            .dataSources(Set.of(DataSource.CONFLUENCE, DataSource.SLACK))
-                                            .query(query)
-                                            .build()),
-                            MediaType.parse("application/json"));
-
-            Request request = (new Request.Builder()).url("http://prd-devxdrovee003.phonepe.mh1:12393/search/v1/search")
-                    .post(requestBody)
-                    .build();
-
-            Response response = httpClientWithProxy.newCall(request).execute();
-            log.info("Response code: {}", response.code());
-            SaarthiResponse<SearchResponse> saarthiResponse = objectMapper.readValue(response.body().bytes(), new TypeReference<>() {
-            });
-            return saarthiResponse.getResponse().getPosts();
-        }
+//        @Tool(value = "This tool is responsible for searching multiple data sources to find matches for a given input query")
+//        @SneakyThrows
+//        public List<Post> search(@JsonPropertyDescription("Query to find results against") final String query) {
+//            log.info("Searching for: {}", query);
+//            final var objectMapper = JsonUtils.createMapper();
+//            RequestBody requestBody =
+//                    RequestBody.create(objectMapper
+//                                    .writeValueAsBytes(SearchRequest.builder()
+//                                            .dataSources(Set.of(DataSource.CONFLUENCE, DataSource.SLACK))
+//                                            .query(query)
+//                                            .build()),
+//                            MediaType.parse("application/json"));
+//
+//            Request request = (new Request.Builder()).url("http://prd-devxdrovee003.phonepe.mh1:12393/search/v1/search")
+//                    .post(requestBody)
+//                    .build();
+//
+//            Response response = httpClientWithProxy.newCall(request).execute();
+//            log.info("Response code: {}", response.code());
+//            SaarthiResponse<SearchResponse> saarthiResponse = objectMapper.readValue(response.body().bytes(), new TypeReference<>() {
+//            });
+//            return saarthiResponse.getResponse().getPosts();
+//        }
 
         @Tool("This tool can be used to get root cause for an anomalous service node")
         @SneakyThrows

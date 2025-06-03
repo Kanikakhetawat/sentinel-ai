@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp;
+package com.phonepe.sentinelai.toolbox.mcp;
 
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.KeyDeserializer;

@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.HttpHeaders;
@@ -17,9 +17,10 @@ import java.time.Duration;
 public class BaseTest {
 
     public static final String AUTH_HEADER =
-            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiOGIyMDJmNzUtY2Y4OC00ODFiLWJjOGUtYWE2ZWI5YTA1NTZlIiwic2lkIjoiNTQ5NmY3NjYtOTBhZS00OGI4LWFkYjUtMDMyZWIyZWI4M2M2IiwiaWF0IjoxNzQ2OTA1MjIxLCJleHAiOjE3NDc1MTAwMjB9.GCy-KqGe8_N9OjC6kSLvpFd2Hzz8zvnlY2YAD6m759NanB725lmlztoq4DKV7BFJ0lv3ZHIICXVB9m2eBKZUGg";
+            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiZjY1NzcxNDYtMzU2Mi00ZTY3LWEyZGItYjNlMDQyOTQ2Mzc5Iiwic2lkIjoiOWVkNzZiMjUtMGY1OC00MzJlLTg0MjktMWRjYmFiZTg0M2QzIiwiaWF0IjoxNzQ4ODQwOTIzLCJleHAiOjE3NDg5MjczMjN9.z3LwkOgMHy_H16etmCRESzru3seIKAqwga5n3EvosxGWTso6mo9pcQeHRhFv4_2hd_IEWLje8xY3qZjWCpIOzA";
+
     public static final String STAGE_AUTH_HEADER =
-            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiYmEzOGEwMGItODJkYi00NjgwLWFkYjMtMDUyNzk5NzgxZGE5Iiwic2lkIjoiMGJmOWQzMGUtYzFjNi00MWY5LTg0Y2EtMWFlMzU2MzY1NTIyIiwiaWF0IjoxNzQ3MTk0Njg4LCJleHAiOjE3NDc3OTk0ODh9.GM5kpm5KH4ONCmIl4zrvqy9BT4u4iMI-O8VHoEdVurnynbcjWjoSnNYiAd-j3hnsjS9w1pIyl2HKBUqCw4D4hA";
+            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiOTNhYzFjMjktZjFlYi00NjE2LTk5MGUtMTlkOTdlNDQwZTJiIiwic2lkIjoiYjlkNGM4Y2EtZGVlYS00ZDI3LWI2YzYtMTAyZGE0MTllNWVmIiwiaWF0IjoxNzQ4ODU4MzkwLCJleHAiOjE3NDk0NjMxODl9.iPcE8X1n19kRnuMguKZp4TDax7TO0ziF7ZzjN8_IZanGwd9o3nPy5L91-3OF-5e-H4pRFp1BDwW-B7GUOnHInw";
 
     public static OkHttpClient httpClientWithProxy;
     public static final ObjectMapper objectMapper = JsonUtils.createMapper();

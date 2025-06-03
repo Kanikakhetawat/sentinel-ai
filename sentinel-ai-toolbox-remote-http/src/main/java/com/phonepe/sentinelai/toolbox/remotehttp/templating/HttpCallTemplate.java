@@ -8,6 +8,7 @@ import lombok.With;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * A generic specification for a remote HTTP call. Parts of this can be templatized
@@ -32,6 +33,9 @@ public class HttpCallTemplate {
          * Variable values are received from LLM as parameters to the actual tool that is exposed to it.
          */
         TEXT_SUBSTITUTOR,
+
+
+        FUNCTION_CALL // This is a placeholder for future expansion, e.g., for function calls
     }
 
     /**
@@ -44,7 +48,8 @@ public class HttpCallTemplate {
     @Builder
     public static class Template {
         @NonNull TemplateType type;
-        @NonNull String content;
+        String content;
+        Function<Map<String, Object>, String> supplier;
 
         /**
          * Creates a new text Template
@@ -69,6 +74,13 @@ public class HttpCallTemplate {
             return Template.builder()
                     .type(TemplateType.TEXT_SUBSTITUTOR)
                     .content(content)
+                    .build();
+        }
+
+        public static Template functionCall(Function<Map<String, Object>, String> supplier) {
+            return Template.builder()
+                    .type(TemplateType.FUNCTION_CALL)
+                    .supplier(supplier)
                     .build();
         }
 

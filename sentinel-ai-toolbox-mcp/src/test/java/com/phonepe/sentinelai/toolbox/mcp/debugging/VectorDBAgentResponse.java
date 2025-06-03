@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import lombok.Getter;
 import lombok.Setter;

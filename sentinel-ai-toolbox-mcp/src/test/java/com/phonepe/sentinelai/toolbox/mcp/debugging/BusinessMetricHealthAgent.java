@@ -1,4 +1,4 @@
-package com.phonepe.sentinelai.mcp.debugging;
+package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -66,6 +66,7 @@ public class BusinessMetricHealthAgent extends BaseTest implements ToolBox {
     @Tool("This tool can be used to get widgets for a particular console section and execute foxtrot queries")
     @SneakyThrows
     public Map<String, ActionResponse> getFoxtrotWidgets(final long start, final long end) {
+
         val request = (new Request.Builder())
                 .url("http://plt-platdrovee239.phonepe.nbr:25283/v1/consoles/section/payments_oncall_dashboard_overall_performance")
                 .build();
@@ -269,26 +270,6 @@ public class BusinessMetricHealthAgent extends BaseTest implements ToolBox {
         return actionResponse;
     }
 
-
-//    private static final class TestAgent extends Agent<UserInput, String, TestAgent> {
-//
-//        @Builder
-//        public TestAgent(@NonNull AgentSetup agentSetup, List<AgentExtension> extensions, Map<String, ExecutableTool> tools) {
-//            super(String.class,
-//                    """
-//                            You are a business metric health tracker agent. Here are the list of tasks which you need to perform
-//                            1. Run foxtrot widget tool to get the applicable widgets and foxtrot query data
-//                            """,
-//                    agentSetup, extensions, tools);
-//        }
-//
-//        @Override
-//        public String name() {
-//            return "business-metric-health-agent";
-//        }
-//
-//
-//
 ////        @Tool("This tool can be used to query foxtrot")
 ////        @SneakyThrows
 ////        public Map<String, List<StatsTrendValue>> getFoxtrotDataForElapsedTime(final UserInput userInput) {
