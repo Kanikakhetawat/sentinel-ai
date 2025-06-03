@@ -1,0 +1,35 @@
+{
+  "id" : "chatcmpl-BHqphXN750IO1pUH1ENKTaaMgUPzN",
+  "object" : "chat.completion",
+  "created" : 1743594365,
+  "model" : "gpt-4o-2024-08-06",
+  "system_fingerprint" : "fp_b705f0c291",
+  "choices" : [ {
+    "index" : 0,
+    "message" : {
+      "role" : "assistant",
+      "tool_calls" : [ {
+        "id" : "call_tAh2fPv6d9gLoBz6qXp6KtKx",
+        "type" : "function",
+        "function" : {
+          "name" : "test_tool_box_get_weather_today",
+          "arguments" : "{\"location\":\"Bangalore\"}"
+        }
+      } ]
+    },
+    "finish_reason" : "tool_calls"
+  } ],
+  "usage" : {
+    "prompt_tokens" : 1508,
+    "completion_tokens" : 20,
+    "total_tokens" : 1528,
+    "completion_tokens_details" : {
+      "audio_tokens" : 0,
+      "reasoning_tokens" : 0
+    },
+    "prompt_tokens_details" : {
+      "audio_tokens" : 0,
+      "cached_tokens" : 1280
+    }
+  }
+}

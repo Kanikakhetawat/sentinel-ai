@@ -314,6 +314,9 @@ public class BaseAgent extends BaseTest {
                 .template(HttpCallTemplate.builder()
                         .method(HttpCallSpec.HttpMethod.POST)
                         .path(HttpCallTemplate.Template.text("/v2/analytics"))
+//                        .body(HttpCallTemplate.Template.handlebars("{" +
+//
+//                                "}"))
                         .body(HttpCallTemplate.Template.functionCall(this::getQuery))
                         .contentType("application/json")
                         .headers(Map.of(
@@ -326,6 +329,8 @@ public class BaseAgent extends BaseTest {
                 .build()
                 .register("foxtrot", widgetTool, queryTool);
     }
+
+
 
     private String getQuery(Map<String, Object> arguments) {
         String widgetData = (String) arguments.get("widget");

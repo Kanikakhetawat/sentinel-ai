@@ -35,7 +35,9 @@ public class HttpCallTemplate {
         TEXT_SUBSTITUTOR,
 
 
-        FUNCTION_CALL // This is a placeholder for future expansion, e.g., for function calls
+        FUNCTION_CALL, // This is a placeholder for future expansion, e.g., for function calls
+
+        HANDLEBARS // This is a placeholder for future expansion, e.g., for Handlebars templates
     }
 
     /**
@@ -84,6 +86,12 @@ public class HttpCallTemplate {
                     .build();
         }
 
+        public static Template handlebars(String content) {
+            return Template.builder()
+                    .type(TemplateType.HANDLEBARS)
+                    .content(content)
+                    .build();
+        }
     }
     /**
      * The HTTP method to use for the call.

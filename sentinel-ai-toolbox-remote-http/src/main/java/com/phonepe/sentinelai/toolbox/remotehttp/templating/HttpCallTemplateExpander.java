@@ -2,6 +2,7 @@ package com.phonepe.sentinelai.toolbox.remotehttp.templating;
 
 import com.phonepe.sentinelai.toolbox.remotehttp.HttpCallSpec;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.FunctionCallSubstitutorHttpCallTemplatingEngine;
+import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.HandlebarHttpCallTemplatingEngine;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.TextHttpCallTemplatingEngine;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.TextSubstitutorHttpCallTemplatingEngine;
 import lombok.AllArgsConstructor;
@@ -23,7 +24,8 @@ public class HttpCallTemplateExpander {
         this(Map.of(
                 HttpCallTemplate.TemplateType.TEXT, new TextHttpCallTemplatingEngine(),
                 HttpCallTemplate.TemplateType.TEXT_SUBSTITUTOR, new TextSubstitutorHttpCallTemplatingEngine(),
-                HttpCallTemplate.TemplateType.FUNCTION_CALL, new FunctionCallSubstitutorHttpCallTemplatingEngine()));
+                HttpCallTemplate.TemplateType.FUNCTION_CALL, new FunctionCallSubstitutorHttpCallTemplatingEngine(),
+                HttpCallTemplate.TemplateType.HANDLEBARS, new HandlebarHttpCallTemplatingEngine()));
     }
 
     /**
