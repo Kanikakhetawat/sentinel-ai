@@ -20,6 +20,7 @@ import com.phonepe.sentinelai.toolbox.remotehttp.HttpToolMetadata;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.HttpCallTemplate;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.InMemoryHttpToolSource;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.TemplatizedHttpTool;
+import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.HandlebarHelper;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
 import io.github.sashirestela.openai.SimpleOpenAI;
 import lombok.Builder;
@@ -299,6 +300,15 @@ public class BaseAgent extends BaseTest {
                 .build();
 
 
+         HandlebarHelper.registerHelper("getQuery", (context, options) ->
+                 getQuery(context.toString(),
+                         options.param(0),
+                         options.param(1)));
+
+         val templateString = """
+                 {{{getQuery widget start end}}}
+                 """;
+
         final var queryTool = TemplatizedHttpTool.builder()
                 .metadata(HttpToolMetadata.builder() //Create tool metadata
                         .name("executeFoxtrotQuery")
@@ -314,10 +324,8 @@ public class BaseAgent extends BaseTest {
                 .template(HttpCallTemplate.builder()
                         .method(HttpCallSpec.HttpMethod.POST)
                         .path(HttpCallTemplate.Template.text("/v2/analytics"))
-//                        .body(HttpCallTemplate.Template.handlebars("{" +
-//
-//                                "}"))
-                        .body(HttpCallTemplate.Template.functionCall(this::getQuery))
+                        .body(HttpCallTemplate.Template.handlebars(templateString))
+//                        .body(HttpCallTemplate.Template.functionCall(this::getQuery))
                         .contentType("application/json")
                         .headers(Map.of(
                                 "Authorization", List.of(HttpCallTemplate.Template.textSubstitutor("O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiNDk1YTZhYjQtNTljZS00M2MyLTllNjYtNGZkMzczM2NlODA5Iiwic2lkIjoiYmJhZGEwMzItNGViYi00NzgxLWE2OTYtNmNiZmYwYzRlOGQ0IiwiaWF0IjoxNzQ4NDA2MjE4LCJleHAiOjE3NDg0MzUwMTh9.1nx4SH4-1S7VEiwIkd0KSdhYl7o6oOjbvThoOlxug4wJxmoYFz9TzgVLwp1pPRL-XSQTtUciKU1LX4daEzmXbA"))))
@@ -330,10 +338,16 @@ public class BaseAgent extends BaseTest {
                 .register("foxtrot", widgetTool, queryTool);
     }
 
+    private String test(Object o) {
+        return "hey";
+    }
 
 
-    private String getQuery(Map<String, Object> arguments) {
-        String widgetData = (String) arguments.get("widget");
+    private String getQuery(final String widget,
+                            final long start,
+                            final long end) {
+//        String widgetData = (String) arguments.get("widget");
+        String widgetData = widget;
 
         log.info("Widget Data: {}", widgetData);
         if (widgetData.startsWith("\"") && widgetData.endsWith("\"")) {
@@ -348,8 +362,11 @@ public class BaseAgent extends BaseTest {
                 return null;
             }
 
-            val startTime = (Long) arguments.get("start") - 3600 * 1000;
-            val endTime = (Long) arguments.get("end");
+//            val startTime = (Long) arguments.get("start") - 3600 * 1000;
+//            val endTime = (Long) arguments.get("end");
+
+            val startTime = start - 3600 * 1000;
+            val endTime = end;
 
             if(filters.isArray()) {
                 val arrayNode = (ArrayNode) filters;

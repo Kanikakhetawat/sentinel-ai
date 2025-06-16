@@ -34,9 +34,6 @@ public class HttpCallTemplate {
          */
         TEXT_SUBSTITUTOR,
 
-
-        FUNCTION_CALL, // This is a placeholder for future expansion, e.g., for function calls
-
         HANDLEBARS // This is a placeholder for future expansion, e.g., for Handlebars templates
     }
 
@@ -50,8 +47,7 @@ public class HttpCallTemplate {
     @Builder
     public static class Template {
         @NonNull TemplateType type;
-        String content;
-        Function<Map<String, Object>, String> supplier;
+        @NonNull String content;
 
         /**
          * Creates a new text Template
@@ -76,13 +72,6 @@ public class HttpCallTemplate {
             return Template.builder()
                     .type(TemplateType.TEXT_SUBSTITUTOR)
                     .content(content)
-                    .build();
-        }
-
-        public static Template functionCall(Function<Map<String, Object>, String> supplier) {
-            return Template.builder()
-                    .type(TemplateType.FUNCTION_CALL)
-                    .supplier(supplier)
                     .build();
         }
 
