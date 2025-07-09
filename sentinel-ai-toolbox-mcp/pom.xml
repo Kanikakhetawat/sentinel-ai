@@ -32,6 +32,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.slack.api</groupId>
+            <artifactId>bolt-servlet</artifactId>
+            <version>1.30.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.phonepe.sentinel-ai</groupId>
             <artifactId>sentinel-ai-core</artifactId>
             <version>${project.version}</version>

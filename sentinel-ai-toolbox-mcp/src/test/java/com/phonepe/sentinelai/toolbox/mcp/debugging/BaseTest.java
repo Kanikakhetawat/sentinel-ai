@@ -17,10 +17,9 @@ import java.time.Duration;
 public class BaseTest {
 
     public static final String AUTH_HEADER =
-            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiYWE5ZjI4NGEtOTI5YS00MGFiLTgyMDQtMjBmZTRjYzY4ZWVlIiwic2lkIjoiMDc4Y2Y5OTItOWE2MS00MTNlLThkOTEtMjVkM2U4OTgzMWZlIiwiaWF0IjoxNzQ5NTM4NTE0LCJleHAiOjE3NDk2MjQ5MTR9.gNXwy95xrSHOfCtVxdFshxNpv2CCboRUEkUY7p77XQMG6DHd9R90YPB9ln0DzMs5K4_84he2cooJWRXuWdQLBg";
+            "";
+    public static final String STAGE_AUTH_HEADER = "";
 
-    public static final String STAGE_AUTH_HEADER =
-"O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiYTFmMjUyNDctMDdhZS00M2Y1LWJjMTctYjEwN2Y3NDgzZTI1Iiwic2lkIjoiN2NmYzBjNzUtOTQ5ZC00OTczLWFiMDktZDhiOTg5NDEwY2M3IiwiaWF0IjoxNzQ5NTQwODMzLCJleHAiOjE3NTAxNDU2MzJ9.OENcfLIG-S07SxQOE2slpImKzZnRuNEUVCdgALTj2EMZPWonCm9I4hdEDYuadT9gW1D7su9HgtEWCFpT5aQ0RQ";
     public static OkHttpClient httpClientWithProxy;
     public static final ObjectMapper objectMapper = JsonUtils.createMapper();
 

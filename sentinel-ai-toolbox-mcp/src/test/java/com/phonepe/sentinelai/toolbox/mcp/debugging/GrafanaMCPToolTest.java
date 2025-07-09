@@ -1,19 +1,14 @@
 package com.phonepe.sentinelai.toolbox.mcp.debugging;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.net.HttpHeaders;
 import com.phonepe.sentinelai.core.agent.Agent;
-import com.phonepe.sentinelai.core.agent.AgentInput;
-import com.phonepe.sentinelai.core.agent.AgentOutput;
 import com.phonepe.sentinelai.core.agent.AgentSetup;
 import com.phonepe.sentinelai.core.model.ModelSettings;
 import com.phonepe.sentinelai.core.tools.ExecutableTool;
-import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
 import com.phonepe.sentinelai.models.SimpleOpenAIModel;
-import com.phonepe.sentinelai.toolbox.mcp.MCPToolBox;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
 import io.github.sashirestela.openai.SimpleOpenAI;
 import io.modelcontextprotocol.client.McpClient;
@@ -22,19 +17,13 @@ import io.modelcontextprotocol.client.transport.StdioClientTransport;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -143,7 +132,6 @@ public class GrafanaMCPToolTest {
                 .hostnameVerifier((hostname, session) -> true)
                 .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
                         .removeHeader(HttpHeaders.AUTHORIZATION)
-                        .header(HttpHeaders.AUTHORIZATION, "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiNWI4Nzk2ODctYmE0Mi00MTliLWI0NjQtMWFkNTM0MzRjMTA1Iiwic2lkIjoiZGRlNTJiNDktNzY4NC00ODM5LWFiYzItNGMzMDZkYjAxY2M0IiwiaWF0IjoxNzQ1OTQzNjA4LCJleHAiOjE3NDYwMzAwMDd9.MUTWnd3KZRt8qruEY7B5Vju-IrYO6JOR4hSajRpbv_SyLSoTxalBumzTQoiPI_MwmNCgM0soB9HAanD5kZolgA")
                         .build()))
                 .callTimeout(Duration.ofSeconds(180))
                 .connectTimeout(Duration.ofSeconds(120))
@@ -185,11 +173,11 @@ public class GrafanaMCPToolTest {
         final var mcpClient = McpClient.sync(transport)
                 .build();
         mcpClient.initialize();
-        final var mcpToolBox = new MCPToolBox(mcpClient, objectMapper);
-        agent.registerToolbox(mcpToolBox);
-        final var response = agent.execute(AgentInput.<UserInput>builder()
-                        .request(new UserInput("ACDHU1Unk", 0, 0))
-                .build());
-        log.info("Agent response: {}", response.getData());
+//        final var mcpToolBox = new MCPToolBox(mcpClient, objectMapper);
+//        agent.registerToolbox(mcpToolBox);
+//        final var response = agent.execute(AgentInput.<UserInput>builder()
+//                        .request(new UserInput("ACDHU1Unk", 0, 0))
+//                .build());
+//        log.info("Agent response: {}", response.getData());
     }
 }
