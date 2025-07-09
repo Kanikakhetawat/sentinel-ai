@@ -133,7 +133,7 @@ public class BaseAgent extends BaseTest {
                     .hostnameVerifier((hostname, session) -> true)
                     .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
                             .removeHeader(HttpHeaders.AUTHORIZATION)
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer ")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer :q")
                             .build()))
                     .callTimeout(Duration.ofSeconds(180))
                     .connectTimeout(Duration.ofSeconds(120))
