@@ -6,16 +6,16 @@
     <parent>
         <groupId>com.phonepe.sentinel-ai</groupId>
         <artifactId>sentinel-ai</artifactId>
-        <version>1.0.0-alpha3</version>
+        <version>1.0.0-alpha4</version>
     </parent>
 
     <artifactId>sentinel-ai-storage-es</artifactId>
+    <name>Sentinel AI Elasticsearch Based Storage implementations</name>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <testcontainers.version>1.20.6</testcontainers.version>
         <elasticsearch.version>8.17.3</elasticsearch.version>
     </properties>
 

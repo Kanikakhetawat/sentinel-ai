@@ -21,6 +21,7 @@ import com.phonepe.sentinelai.core.errors.SentinelError;
 import com.phonepe.sentinelai.core.events.EventBus;
 import com.phonepe.sentinelai.core.events.ToolCallCompletedAgentEvent;
 import com.phonepe.sentinelai.core.events.ToolCalledAgentEvent;
+import com.phonepe.sentinelai.core.model.ModelOutput;
 import com.phonepe.sentinelai.core.model.ModelUsageStats;
 import com.phonepe.sentinelai.core.tools.*;
 import com.phonepe.sentinelai.core.utils.AgentUtils;
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.phonepe.sentinelai.core.utils.JsonUtils.schema;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -54,11 +56,6 @@ import static java.util.stream.Collectors.toMap;
  */
 @Slf4j
 public abstract class Agent<R, T, A extends Agent<R, T, A>> {
-
-    @FunctionalInterface
-    public interface ToolRunner<S> {
-        ToolCallResponse runTool(AgentRunContext<S> context, Map<String, ExecutableTool> tool, ToolCall toolCall);
-    }
 
     @Value
     public static class ProcessingCompletedData<R, T, A extends Agent<R, T, A>> {
@@ -74,27 +71,39 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
     private final String systemPrompt;
     private final AgentSetup setup;
     private final List<AgentExtension> extensions;
+    private final ToolRunApprovalSeeker<R,T,A> toolRunApprovalSeeker;
     private final Map<String, ExecutableTool> knownTools = new ConcurrentHashMap<>();
     private final XmlMapper xmlMapper = new XmlMapper();
     private final ConsumingFireForgetSignal<ProcessingCompletedData<R, T, A>> requestCompleted =
             new ConsumingFireForgetSignal<>();
 
     @SuppressWarnings("unchecked")
-    private final A self = (A)this;
-    
-    @SneakyThrows
+    private final A self = (A) this;
+
     protected Agent(
             @NonNull Class<T> outputType,
             @NonNull String systemPrompt,
             @NonNull AgentSetup setup,
             List<AgentExtension> extensions,
             Map<String, ExecutableTool> knownTools) {
+        this(outputType, systemPrompt, setup, extensions, knownTools, new ApproveAllToolRuns<>());
+    }
+
+    @SneakyThrows
+    protected Agent(
+            @NonNull Class<T> outputType,
+            @NonNull String systemPrompt,
+            @NonNull AgentSetup setup,
+            List<AgentExtension> extensions,
+            Map<String, ExecutableTool> knownTools,
+            ToolRunApprovalSeeker<R, T, A> toolRunApprovalSeeker) {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(systemPrompt), "Please provide a valid system prompt");
 
         this.outputType = outputType;
         this.systemPrompt = systemPrompt;
         this.setup = setup;
         this.extensions = Objects.requireNonNullElseGet(extensions, List::of);
+        this.toolRunApprovalSeeker = Objects.requireNonNullElseGet(toolRunApprovalSeeker, ApproveAllToolRuns::new);
         xmlMapper.registerModule(new JavaTimeModule());
         xmlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
@@ -147,7 +156,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
     public A registerTools(List<ExecutableTool> tools) {
         return registerTools(Objects.requireNonNullElseGet(tools, List::<InternalTool>of)
                                      .stream()
-                                     .collect(toMap(tool -> tool.getToolDefinition().getName(),
+                                     .collect(toMap(tool -> tool.getToolDefinition().getId(),
                                                     Function.identity())));
     }
 
@@ -177,7 +186,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
      * Execute the agent synchronously.
      *
      * @param input Input to the agent
-     * @return
+     * @return The response from the agent
      */
     public final CompletableFuture<AgentOutput<T>> executeAsync(@NonNull AgentInput<R> input) {
         final var mergedAgentSetup = mergeAgentSetup(input.getAgentSetup(), this.setup);
@@ -204,19 +213,19 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                                                                        SentinelError.error(ErrorType.SERIALIZATION_ERROR,
                                                                                            e)));
         }
-        log.debug("Final system prompt: {}", finalSystemPrompt);
         messages.add(new com.phonepe.sentinelai.core.agentmessages.requests.SystemPrompt(finalSystemPrompt,
                                                                                          false,
                                                                                          null));
         messages.add(new UserPrompt(toXmlContent(inputRequest), LocalDateTime.now()));
         return mergedAgentSetup.getModel()
-                .exchange_messages(
+                .exchangeMessages(
                         context,
-                        outputType,
+                        outputSchema(),
                         knownTools,
                         this::runToolObserved,
                         this.extensions,
                         self)
+                .thenApply(modelOutput -> convertToAgentOutput(modelOutput, mergedAgentSetup))
                 .thenApplyAsync(response -> {
                     if (null != response.getUsage() && requestMetadata != null && requestMetadata.getUsageStats() != null) {
                         requestMetadata.getUsageStats().merge(response.getUsage());
@@ -237,14 +246,14 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
      * @param input The input to the agent
      * @return The response to be consumed by the client
      */
-    public final CompletableFuture<AgentOutput<byte[]>> executeAsyncStreaming(
+    public final CompletableFuture<AgentOutput<T>> executeAsyncStreaming(
             AgentInput<R> input,
             Consumer<byte[]> streamHandler) {
         final var mergedAgentSetup = mergeAgentSetup(input.getAgentSetup(), this.setup);
         final var messages = new ArrayList<>(Objects.requireNonNullElse(input.getOldMessages(), List.<AgentMessage>of())
                                                      .stream()
                                                      .filter(message -> !message.getMessageType()
-                                                             .equals(AgentMessageType.SYSTEM_PROMPT_REQUEST))
+                                                             .equals(AgentMessageType.SYSTEM_PROMPT_REQUEST_MESSAGE))
                                                      .toList());
         final var runId = UUID.randomUUID().toString();
         final var requestMetadata = input.getRequestMetadata();
@@ -268,31 +277,59 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                                                                        SentinelError.error(ErrorType.SERIALIZATION_ERROR,
                                                                                            e)));
         }
-        log.debug("Final system prompt: {}", finalSystemPrompt);
         messages.add(new com.phonepe.sentinelai.core.agentmessages.requests.SystemPrompt(finalSystemPrompt,
                                                                                          false,
                                                                                          null));
         messages.add(new UserPrompt(toXmlContent(request), LocalDateTime.now()));
         return mergedAgentSetup.getModel()
-                .exchange_messages_streaming(
+                .exchangeMessagesStreaming(
                         context,
                         knownTools,
                         this::runToolObserved,
                         this.extensions,
                         self,
                         streamHandler)
+                .thenApply(modelOutput -> convertToAgentOutput(modelOutput, mergedAgentSetup))
                 .thenApply(response -> {
                     if (null != response.getUsage() && requestMetadata != null && requestMetadata.getUsageStats() != null) {
                         requestMetadata.getUsageStats().merge(response.getUsage());
                     }
                     requestCompleted.dispatch(new ProcessingCompletedData<>(this,
-                                                                                   mergedAgentSetup,
-                                                                                   context,
-                                                                                   input,
-                                                                                   response,
-                                                                                   ProcessingMode.STREAMING));
+                                                                            mergedAgentSetup,
+                                                                            context,
+                                                                            input,
+                                                                            response,
+                                                                            ProcessingMode.STREAMING));
                     return response;
                 });
+    }
+
+    protected JsonNode outputSchema() {
+        return schema(outputType);
+    }
+
+    protected T translateData(ModelOutput modelOutput, AgentSetup mergedAgentSetup) throws JsonProcessingException {
+        return mergedAgentSetup.getMapper().treeToValue(modelOutput.getData(), outputType);
+    }
+
+    private AgentOutput<T> convertToAgentOutput(
+            ModelOutput modelOutput,
+            AgentSetup mergedAgentSetup) {
+        try {
+            return new AgentOutput<>(null != modelOutput.getData()
+                                     ? translateData(modelOutput, mergedAgentSetup)
+                                     : null,
+                                     modelOutput.getNewMessages(),
+                                     modelOutput.getAllMessages(),
+                                     modelOutput.getUsage(),
+                                     modelOutput.getError());
+        }
+        catch (JsonProcessingException e) {
+            log.error("Error converting model output to agent output. Error: {}", AgentUtils.rootCause(e), e);
+            return AgentOutput.error(modelOutput.getAllMessages(),
+                                     modelOutput.getUsage(),
+                                     SentinelError.error(ErrorType.JSON_ERROR, e));
+        }
     }
 
     private String systemPrompt(
@@ -332,7 +369,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                                         .tool(this.knownTools.values()
                                                       .stream()
                                                       .map(tool -> SystemPrompt.ToolSummary.builder()
-                                                              .name(tool.getToolDefinition().getName())
+                                                              .name(tool.getToolDefinition().getId())
                                                               .description(tool.getToolDefinition()
                                                                                    .getDescription())
                                                               .build())
@@ -346,8 +383,9 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                                              .setUserId(requestMetadata.getUserId())
                                              .setCustomParams(requestMetadata.getCustomParams()));
         }
-        return xmlMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(prompt);
+        final var generatedSystemPrompt = xmlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(prompt);
+        log.debug("Final system prompt: {}", generatedSystemPrompt);
+        return generatedSystemPrompt;
 
     }
 
@@ -374,6 +412,15 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
             AgentRunContext<R> context,
             Map<String, ExecutableTool> tools,
             ToolCall toolCall) {
+        if (!toolRunApprovalSeeker.seekApproval(self, context, toolCall)) {
+            log.info("Tool call {} for tool {} was not approved by the user", toolCall.getToolCallId(),
+                     toolCall.getToolName());
+            return new ToolCallResponse(toolCall.getToolCallId(),
+                                        toolCall.getToolName(),
+                                        ErrorType.TOOL_CALL_PERMANENT_FAILURE,
+                                        "Tool call was not approved by the user",
+                                        LocalDateTime.now());
+        }
         context.getAgentSetup()
                 .getEventBus()
                 .notify(new ToolCalledAgentEvent(name(),
@@ -434,7 +481,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                     return new ToolCallResponse(toolCall.getToolCallId(),
                                                 toolCall.getToolName(),
                                                 ErrorType.SUCCESS,
-                                                setup.getMapper().writeValueAsString(response.response()),
+                                                context.getAgentSetup().getMapper().writeValueAsString(response.response()),
                                                 LocalDateTime.now());
                 }
                 catch (JsonProcessingException e) {
@@ -457,7 +504,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                     args.addAll(params(internalTool.getMethodInfo(), toolCall.getArguments()));
                     final var callable = internalTool.getMethodInfo().callable();
                     callable.setAccessible(true);
-                    log.info("Calling tool: {} Tool call ID: {}", toolCall.getToolName(), toolCall.getToolCallId());
+                    log.debug("Calling tool: {} Tool call ID: {}", toolCall.getToolName(), toolCall.getToolCallId());
                     var resultObject = callable.invoke(internalTool.getInstance(), args.toArray());
                     return new ToolCallResponse(toolCall.getToolCallId(),
                                                 toolCall.getToolName(),
@@ -466,7 +513,7 @@ public abstract class Agent<R, T, A extends Agent<R, T, A>> {
                                                 LocalDateTime.now());
                 }
                 catch (InvocationTargetException e) {
-                    log.info("Local error making tool call " + toolCall.getToolCallId(), e);
+                    log.error("Local error making tool call " + toolCall.getToolCallId(), e);
                     final var rootCause = AgentUtils.rootCause(e);
                     return new ToolCallResponse(toolCall.getToolCallId(),
                                                 toolCall.getToolName(),

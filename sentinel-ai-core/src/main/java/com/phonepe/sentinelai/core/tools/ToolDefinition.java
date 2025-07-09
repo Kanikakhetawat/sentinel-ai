@@ -13,6 +13,9 @@ import lombok.With;
 @Builder
 public class ToolDefinition {
     @NonNull
+    String id;
+
+    @NonNull
     String name;
 
     @NonNull
@@ -20,4 +23,5 @@ public class ToolDefinition {
 
     boolean contextAware;
 
+    boolean strictSchema;
 }

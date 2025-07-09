@@ -6,10 +6,11 @@
     <parent>
         <groupId>com.phonepe.sentinel-ai</groupId>
         <artifactId>sentinel-ai</artifactId>
-        <version>1.0.0-alpha3</version>
+        <version>1.0.0-alpha4</version>
     </parent>
 
     <artifactId>sentinel-ai-toolbox-remote-http</artifactId>
+    <name>Sentinel AI ToolBox to work with Remote HTTP Services</name>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

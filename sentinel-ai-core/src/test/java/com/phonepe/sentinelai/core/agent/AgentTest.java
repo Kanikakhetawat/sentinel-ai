@@ -1,13 +1,16 @@
 package com.phonepe.sentinelai.core.agent;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.phonepe.sentinelai.core.agentmessages.requests.ToolCallResponse;
 import com.phonepe.sentinelai.core.agentmessages.responses.ToolCall;
 import com.phonepe.sentinelai.core.errors.ErrorType;
 import com.phonepe.sentinelai.core.errors.SentinelError;
 import com.phonepe.sentinelai.core.model.Model;
+import com.phonepe.sentinelai.core.model.ModelOutput;
 import com.phonepe.sentinelai.core.model.ModelSettings;
 import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
+import com.phonepe.sentinelai.core.tools.ToolRunApprovalSeeker;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +42,15 @@ class AgentTest {
                 @NonNull AgentSetup setup,
                 List<AgentExtension> extensions,
                 Map<String, ExecutableTool> knownTools) {
-            super(String.class, "This is irrelevant", setup, extensions, knownTools);
+            this(setup, extensions, knownTools, new ApproveAllToolRuns<>());
+        }
+
+        public TestAgent(
+                @NonNull AgentSetup setup,
+                List<AgentExtension> extensions,
+                Map<String, ExecutableTool> knownTools,
+                ToolRunApprovalSeeker<String, String, TestAgent> toolRunApprovalSeeker) {
+            super(String.class, "This is irrelevant", setup, extensions, knownTools, toolRunApprovalSeeker);
         }
 
         @Override
@@ -70,7 +81,7 @@ class AgentTest {
             // Do nothing
         }
 
-        @Tool("Tool that takes tructured input and returns structured output")
+        @Tool("Tool that takes structured input and returns structured output")
         public Output structuredTool(final Input input) {
             return new Output("Hello " + input.data);
         }
@@ -82,11 +93,11 @@ class AgentTest {
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -98,7 +109,7 @@ class AgentTest {
                                                                                      "test_agent_get_name",
                                                                                      "{}"));
                                                                 assertTrue(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -108,10 +119,11 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>success((T) ("Hello " + response.getResponse()),
-                                                                                              List.of(message),
-                                                                                              messages,
-                                                                                              context.getModelUsageStats());
+                                                                return ModelOutput.success(objectMapper.createObjectNode()
+                                                                                                   .textNode("Hello " + response.getResponse()),
+                                                                                           List.of(message),
+                                                                                           messages,
+                                                                                           context.getModelUsageStats());
                                                             });
                                                         }
                                                     })
@@ -134,16 +146,77 @@ class AgentTest {
     }
 
     @Test
+    void testToolCallNoApproval() {
+        final var objectMapper = JsonUtils.createMapper();
+        final var textAgent = new TestAgent(AgentSetup.builder()
+                                                    .model(new Model() {
+                                                        @Override
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
+                                                                AgentRunContext<R> context,
+                                                                JsonNode responseSchema,
+                                                                Map<String, ExecutableTool> tools,
+                                                                ToolRunner<R> toolRunner,
+                                                                List<AgentExtension> extensions,
+                                                                A agent) {
+                                                            return CompletableFuture.supplyAsync(() -> {
+                                                                assertTrue(tools.containsKey("test_agent_get_name"));
+                                                                final var response = toolRunner.runTool(
+                                                                        context,
+                                                                        tools,
+                                                                        new ToolCall("TC1",
+                                                                                     "test_agent_get_name",
+                                                                                     "{}"));
+                                                                assertFalse(response.isSuccess());
+                                                                assertEquals("TC1", response.getToolCallId());
+                                                                final var messages =
+                                                                        new ArrayList<>(context.getOldMessages());
+                                                                final var message =
+                                                                        new ToolCallResponse(response.getToolCallId(),
+                                                                                             response.getToolName(),
+                                                                                             response.getErrorType(),
+                                                                                             response.getResponse(),
+                                                                                             LocalDateTime.now());
+                                                                messages.add(message);
+                                                                return ModelOutput.success(objectMapper.createObjectNode()
+                                                                                                   .textNode("Tool call not approved"),
+                                                                                           List.of(message),
+                                                                                           messages,
+                                                                                           context.getModelUsageStats());
+                                                            });
+                                                        }
+                                                    })
+                                                    .modelSettings(ModelSettings.builder()
+                                                                           .build())
+                                                    .mapper(objectMapper)
+                                                    .build(),
+                                            List.of(),
+                                            Map.of(),
+                                            (agent, runContext, toolCall) -> {
+                                                return !"test_agent_get_name".equals(toolCall.getToolName());
+                                            }
+        );
+        final var response = textAgent.execute(
+                AgentInput.<String>builder()
+                        .request("Hi")
+                        .requestMetadata(
+                                AgentRequestMetadata.builder()
+                                        .sessionId("s1")
+                                        .userId("ss").build())
+                        .build());
+        assertTrue(response.getData().equals("Tool call not approved"));
+    }
+
+    @Test
     void testContextAwareToolCall() {
         final var objectMapper = JsonUtils.createMapper();
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -158,7 +231,7 @@ class AgentTest {
                                                                                              { "input": "Test Data" }
                                                                                              """));
                                                                 assertTrue(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -168,12 +241,14 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>success((T) ("Hello " + response.getResponse()),
-                                                                                              List.of(message),
-                                                                                              messages,
-                                                                                              context.getModelUsageStats());
+                                                                return ModelOutput.success(objectMapper.createObjectNode()
+                                                                                                   .textNode("Hello " + response.getResponse()),
+                                                                                           List.of(message),
+                                                                                           messages,
+                                                                                           context.getModelUsageStats());
                                                             });
                                                         }
+
                                                     })
                                                     .modelSettings(ModelSettings.builder()
                                                                            .build())
@@ -198,12 +273,13 @@ class AgentTest {
         final var objectMapper = JsonUtils.createMapper();
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
+
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -215,7 +291,7 @@ class AgentTest {
                                                                                      "test_agent_void_tool",
                                                                                      "{}"));
                                                                 assertTrue(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -225,10 +301,11 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>success((T) ("Hello " + response.getResponse()),
-                                                                                              List.of(message),
-                                                                                              messages,
-                                                                                              context.getModelUsageStats());
+                                                                return ModelOutput.success(objectMapper.createObjectNode()
+                                                                                                   .textNode("Hello " + response.getResponse()),
+                                                                                           List.of(message),
+                                                                                           messages,
+                                                                                           context.getModelUsageStats());
                                                             });
                                                         }
                                                     })
@@ -256,11 +333,11 @@ class AgentTest {
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -279,7 +356,7 @@ class AgentTest {
                                                                                              }
                                                                                              """));
                                                                 assertTrue(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -289,10 +366,11 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>success((T) ("Hello " + response.getResponse()),
-                                                                                              List.of(message),
-                                                                                              messages,
-                                                                                              context.getModelUsageStats());
+                                                                return ModelOutput.success(objectMapper.createObjectNode()
+                                                                                                   .textNode("Hello " + response.getResponse()),
+                                                                                           List.of(message),
+                                                                                           messages,
+                                                                                           context.getModelUsageStats());
                                                             });
                                                         }
                                                     })
@@ -320,12 +398,13 @@ class AgentTest {
         final var objectMapper = JsonUtils.createMapper();
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
+
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -337,7 +416,7 @@ class AgentTest {
                                                                                      "test_agent_throw_tool",
                                                                                      "{}"));
                                                                 assertFalse(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -347,11 +426,11 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>error(messages,
-                                                                                            context.getModelUsageStats(),
-                                                                                            SentinelError.error(
-                                                                                                    ErrorType.TOOL_CALL_PERMANENT_FAILURE,
-                                                                                                    response.getResponse()));
+                                                                return ModelOutput.error(messages,
+                                                                                         context.getModelUsageStats(),
+                                                                                         SentinelError.error(
+                                                                                                 ErrorType.TOOL_CALL_PERMANENT_FAILURE,
+                                                                                                 response.getResponse()));
                                                             });
                                                         }
                                                     })
@@ -381,11 +460,11 @@ class AgentTest {
         final var textAgent = new TestAgent(AgentSetup.builder()
                                                     .model(new Model() {
                                                         @Override
-                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<AgentOutput<T>> exchange_messages(
+                                                        public <R, T, A extends Agent<R, T, A>> CompletableFuture<ModelOutput> exchangeMessages(
                                                                 AgentRunContext<R> context,
-                                                                Class<T> responseType,
+                                                                JsonNode responseSchema,
                                                                 Map<String, ExecutableTool> tools,
-                                                                Agent.ToolRunner<R> toolRunner,
+                                                                ToolRunner<R> toolRunner,
                                                                 List<AgentExtension> extensions,
                                                                 A agent) {
                                                             return CompletableFuture.supplyAsync(() -> {
@@ -396,7 +475,7 @@ class AgentTest {
                                                                                      "getUnknown",
                                                                                      "{}"));
                                                                 assertFalse(response.isSuccess());
-                                                                assertTrue(response.getToolCallId().equals("TC1"));
+                                                                assertEquals("TC1", response.getToolCallId());
                                                                 final var messages =
                                                                         new ArrayList<>(context.getOldMessages());
                                                                 final var message =
@@ -406,7 +485,7 @@ class AgentTest {
                                                                                              response.getResponse(),
                                                                                              LocalDateTime.now());
                                                                 messages.add(message);
-                                                                return AgentOutput.<T>error(messages,
+                                                                return ModelOutput.error(messages,
                                                                                             context.getModelUsageStats(),
                                                                                             SentinelError.error(
                                                                                                     ErrorType.TOOL_CALL_PERMANENT_FAILURE,

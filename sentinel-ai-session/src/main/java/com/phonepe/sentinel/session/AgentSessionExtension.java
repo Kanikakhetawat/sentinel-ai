@@ -76,7 +76,7 @@ public class AgentSessionExtension implements AgentExtension {
                 prompt.tool(tools.values()
                                        .stream()
                                        .map(tool -> SystemPrompt.ToolSummary.builder()
-                                               .name(tool.getToolDefinition().getName())
+                                               .name(tool.getToolDefinition().getId())
                                                .description(tool.getToolDefinition().getDescription())
                                                .build())
                                        .toList());
@@ -121,6 +121,6 @@ public class AgentSessionExtension implements AgentExtension {
 
     @Override
     public <R, T, A extends Agent<R, T, A>> void onRegistrationCompleted(A agent) {
-
+        //Nothing to do here for now
     }
 }

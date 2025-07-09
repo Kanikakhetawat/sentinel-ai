@@ -6,11 +6,12 @@
     <parent>
         <groupId>com.phonepe.sentinel-ai</groupId>
         <artifactId>sentinel-ai</artifactId>
-        <version>1.0.0-alpha3</version>
+        <version>1.0.0-alpha4</version>
     </parent>
 
     <artifactId>sentinel-ai-bom</artifactId>
     <packaging>pom</packaging>
+    <name>Sentinel AI BOM for all components</name>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -59,6 +60,11 @@
             <dependency>
                 <groupId>com.phonepe.sentinel-ai</groupId>
                 <artifactId>sentinel-ai-session</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.phonepe.sentinel-ai</groupId>
+                <artifactId>sentinel-ai-configured-agents</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -111,6 +117,11 @@
         <dependency>
             <groupId>com.phonepe.sentinel-ai</groupId>
             <artifactId>sentinel-ai-session</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.phonepe.sentinel-ai</groupId>
+            <artifactId>sentinel-ai-configured-agents</artifactId>
             <version>${project.version}</version>
         </dependency>
 

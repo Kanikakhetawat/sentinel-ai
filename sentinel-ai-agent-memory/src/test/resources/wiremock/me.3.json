@@ -1,35 +1,35 @@
 {
-  "id" : "chatcmpl-BHqphXN750IO1pUH1ENKTaaMgUPzN",
+  "id" : "chatcmpl-Blu1bf3JqoZn11dBvwl1i9m5UVzKl",
   "object" : "chat.completion",
-  "created" : 1743594365,
-  "model" : "gpt-4o-2024-08-06",
-  "system_fingerprint" : "fp_b705f0c291",
+  "created" : 1750756475,
+  "model" : "gpt-4o-mini-2024-07-18",
+  "system_fingerprint" : "fp_57db37749c",
   "choices" : [ {
     "index" : 0,
     "message" : {
       "role" : "assistant",
       "tool_calls" : [ {
-        "id" : "call_tAh2fPv6d9gLoBz6qXp6KtKx",
+        "id" : "call_MCdOSAwxpYIH4i3YPLMdZRJl",
         "type" : "function",
         "function" : {
-          "name" : "test_tool_box_get_weather_today",
-          "arguments" : "{\"location\":\"Bangalore\"}"
+          "name" : "simple_agent_get_name",
+          "arguments" : "{}"
         }
       } ]
     },
     "finish_reason" : "tool_calls"
   } ],
   "usage" : {
-    "prompt_tokens" : 1508,
-    "completion_tokens" : 20,
-    "total_tokens" : 1528,
+    "prompt_tokens" : 1340,
+    "completion_tokens" : 13,
+    "total_tokens" : 1353,
     "completion_tokens_details" : {
       "audio_tokens" : 0,
       "reasoning_tokens" : 0
     },
     "prompt_tokens_details" : {
       "audio_tokens" : 0,
-      "cached_tokens" : 1280
+      "cached_tokens" : 0
     }
   }
 }

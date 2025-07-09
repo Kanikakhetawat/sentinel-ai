@@ -7,11 +7,13 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.phonepe.sentinel.session.AgentSessionExtension;
 import com.phonepe.sentinelai.agentmemory.AgentMemoryExtension;
+import com.phonepe.sentinelai.agentmemory.MemoryExtractionMode;
 import com.phonepe.sentinelai.core.agent.*;
 import com.phonepe.sentinelai.core.model.ModelSettings;
 import com.phonepe.sentinelai.core.tools.ExecutableTool;
 import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.tools.ToolBox;
+import com.phonepe.sentinelai.core.utils.AgentUtils;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
 import com.phonepe.sentinelai.core.utils.TestUtils;
 import com.phonepe.sentinelai.embedding.HuggingfaceEmbeddingModel;
@@ -122,7 +124,7 @@ public class AgentIntegrationTest extends ESIntegrationTestBase {
         final var extensions = List.of(AgentMemoryExtension.builder()
                                                .objectMapper(objectMapper)
                                                .memoryStore(memoryStorage)
-                                               .saveMemoryAfterSessionEnd(true)
+                                               .memoryExtractionMode(MemoryExtractionMode.INLINE)
                                                .build(),
                                        AgentSessionExtension.builder()
                                                .sessionStore(sessionStorage)
@@ -186,6 +188,11 @@ public class AgentIntegrationTest extends ESIntegrationTestBase {
         @Tool("Get  location for user")
         public String getLocationForUser(@JsonPropertyDescription("Name of user") final String name) {
             return name.equalsIgnoreCase("Santanu") ? "Bangalore" : "unknown";
+        }
+
+        @Override
+        public String name() {
+            return AgentUtils.id(user);
         }
     }
 }
