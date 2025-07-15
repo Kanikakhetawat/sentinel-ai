@@ -6,7 +6,7 @@
 
     <groupId>com.phonepe.sentinel-ai</groupId>
     <artifactId>sentinel-ai</artifactId>
-    <version>1.0.0-alpha4</version>
+    <version>1.0.0-alpha5</version>
     <name>Sentinel AI</name>
     <url>https://github.com/PhonePe/sentinel-ai</url>
     <description>Sentinel AI Agent Framework</description>
@@ -182,6 +182,13 @@
                     <source>17</source>
                     <target>17</target>
                     <compilerArgument>-parameters</compilerArgument>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

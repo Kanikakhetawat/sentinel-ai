@@ -37,7 +37,7 @@ public class ConfiguredAgentFactory {
         final var capabilities = Objects.requireNonNullElseGet(agentConfiguration.getCapabilities(),
                                                                List::<AgentCapability>of);
         final var toolBoxes = new ArrayList<ToolBox>();
-        final var extensions = new ArrayList<AgentExtension>();
+        final var extensions = new ArrayList<AgentExtension<String, String, ConfiguredAgent.RootAgent>>();
 
         capabilities.forEach(
                 agentCapability -> agentCapability.accept(new AgentCapabilityVisitor<Void>() {
@@ -69,7 +69,7 @@ public class ConfiguredAgentFactory {
                                         .map(toolsFromUpstream -> new ComposingToolBox(
                                                 List.of(mcpToolboxFactory.find(toolsFromUpstream.getKey())
                                                                 .orElseThrow(() -> new IllegalArgumentException(
-                                                                        "No HTTP tool box found for: " + toolsFromUpstream.getKey()))),
+                                                                        "No MCP tool box found for: " + toolsFromUpstream.getKey()))),
                                                 toolsFromUpstream.getValue()))
                                         .toList());
                         return null;
