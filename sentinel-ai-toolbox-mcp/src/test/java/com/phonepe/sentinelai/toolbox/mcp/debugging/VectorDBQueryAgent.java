@@ -84,6 +84,11 @@ public class VectorDBQueryAgent extends BaseTest implements ToolBox {
         return searchResponse;
     }
 
+    @Override
+    public String name() {
+        return "";
+    }
+
 //    private static final class TestAgent extends Agent<String, VectorDBAgentResponse, TestAgent> {
 //
 //        @Builder

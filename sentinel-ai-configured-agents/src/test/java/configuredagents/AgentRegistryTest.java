@@ -199,14 +199,14 @@ class AgentRegistryTest {
                 .readTimeout(Duration.ofSeconds(180))
                 .writeTimeout(Duration.ofSeconds(120))
                 .build();
-        final var params = ServerParameters.builder("npx")
-                .args("-y", "@modelcontextprotocol/server-everything")
-                .build();
-        final var transport = new StdioClientTransport(params);
-
-        final var mcpClient = McpClient.sync(transport)
-                .build();
-        mcpClient.initialize();
+//        final var params = ServerParameters.builder("npx")
+//                .args("-y", "@modelcontextprotocol/server-everything")
+//                .build();
+//        final var transport = new StdioClientTransport(params);
+//
+//        final var mcpClient = McpClient.sync(transport)
+//                .build();
+//        mcpClient.initialize();
         final var agentFactory = ConfiguredAgentFactory.builder()
                 .httpToolboxFactory(new HttpToolboxFactory(okHttpClient,
                                                              objectMapper,
@@ -218,14 +218,11 @@ class AgentRegistryTest {
                                                                  }
                                                              }))
                 .mcpToolboxFactory(MCPToolBoxFactory.builder()
-                                           .objectMapper(objectMapper)
-                                           .clientProvider(upstream -> {
-                                                  if (upstream.equals("mcp")) {
-                                                    return Optional.of(mcpClient);
-                                                  }
-                                                  return Optional.empty();
-                                           })
-                                           .build())
+                        .objectMapper(objectMapper)
+                        .clientProvider(upstream -> {
+                            throw new IllegalStateException("MCP is not supported in this test");
+                        })
+                        .build())
                 .build();
         final var registry = AgentRegistry.<String, String, PlannerAgent>builder()
                 .agentSource(agentSource)

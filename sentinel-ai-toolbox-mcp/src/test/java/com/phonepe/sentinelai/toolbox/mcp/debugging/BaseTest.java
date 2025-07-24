@@ -16,8 +16,7 @@ import java.time.Duration;
 
 public class BaseTest {
 
-    public static final String AUTH_HEADER =
-            "";
+    public static final String AUTH_HEADER ="";
     public static final String STAGE_AUTH_HEADER = "";
 
     public static OkHttpClient httpClientWithProxy;
@@ -61,5 +60,6 @@ public class BaseTest {
                 .build();
 
     }
+
 
 }

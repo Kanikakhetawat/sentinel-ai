@@ -1,199 +1,107 @@
-package com.phonepe.sentinelai.toolbox.mcp.debugging;
+package configuredagents.debuggingagent;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
 import com.phonepe.sentinelai.core.agent.Agent;
 import com.phonepe.sentinelai.core.agent.AgentExtension;
 import com.phonepe.sentinelai.core.agent.AgentInput;
-import com.phonepe.sentinelai.core.agent.AgentRequestMetadata;
 import com.phonepe.sentinelai.core.agent.AgentSetup;
-import com.phonepe.sentinelai.core.events.EventBus;
 import com.phonepe.sentinelai.core.model.ModelSettings;
-import com.phonepe.sentinelai.core.tools.ExecutableTool;
-import com.phonepe.sentinelai.core.tools.Tool;
 import com.phonepe.sentinelai.core.utils.JsonUtils;
 import com.phonepe.sentinelai.models.SimpleOpenAIModel;
 import com.phonepe.sentinelai.toolbox.remotehttp.HttpCallSpec;
-import com.phonepe.sentinelai.toolbox.remotehttp.HttpToolBox;
 import com.phonepe.sentinelai.toolbox.remotehttp.HttpToolMetadata;
+import com.phonepe.sentinelai.toolbox.remotehttp.UpstreamResolver;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.HttpCallTemplate;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.InMemoryHttpToolSource;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.ResponseTransformerConfig;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.TemplatizedHttpTool;
 import com.phonepe.sentinelai.toolbox.remotehttp.templating.engines.HandlebarHelper;
-import com.slack.api.methods.response.search.SearchAllResponse;
-import com.slack.api.model.MatchedItem;
+import configuredagents.AgentConfiguration;
+import configuredagents.AgentRegistry;
+import configuredagents.ConfiguredAgentFactory;
+import configuredagents.HttpToolboxFactory;
+import configuredagents.InMemoryAgentConfigurationSource;
+import configuredagents.MCPToolBoxFactory;
+import configuredagents.capabilities.AgentCapabilities;
 import io.github.sashirestela.cleverclient.client.OkHttpClientAdapter;
 import io.github.sashirestela.openai.SimpleOpenAI;
 import lombok.Builder;
 import lombok.NonNull;
+import lombok.Singular;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.security.NoSuchAlgorithmException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 import static com.phonepe.sentinelai.toolbox.remotehttp.HttpToolParameterType.LONG;
 import static com.phonepe.sentinelai.toolbox.remotehttp.HttpToolParameterType.STRING;
 
 @Slf4j
-public class BaseAgent extends BaseTest {
+public class DebuggingAgentTest {
 
-    public static final String AUTH_HEADER = "";
+    public static final String AUTH_HEADER =
+            "";
 
-    @BeforeEach
-    void setup() {
-        super.setup();
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-
-    @JsonClassDescription("User input")
-    public record UserInput(String data, String service, long start, long end) {
-    }
-
-
-    private static final class TestAgent extends Agent<UserInput, String, TestAgent> {
-
+    private static final class PlannerAgent extends Agent<UserInput, String, PlannerAgent> {
         @Builder
-        public TestAgent(@NonNull AgentSetup agentSetup, List<AgentExtension<UserInput, String, TestAgent>> extensions, Map<String, ExecutableTool> tools) {
+        public PlannerAgent(@NonNull AgentSetup setup, @Singular List<AgentExtension<UserInput, String, PlannerAgent>> extensions) {
             super(String.class,
                     """
-                            You are a debugging agent. Here are the list of tasks which you need to perform. Please make sure to perform each individual step
-                             Step 1. Run ServiceHealth tool to identify any issues with the service.
-                                     a. Run RCA tool to identify the root cause for each anomalous widget
-                             Step 2. Get business widgets. Run following steps:
-                                     a. Use `businessMetricWidgetTool` to fetch all business metric widgets.
-                                     b. Extract all the widget data associated with "widgets" key from the above json response.
-                                     c. Select the widgets using the following pseudocode logic:
-                                        for widget in widgets:
-                                           if widget["layout"]["coordinateY"] <= 10 and widget["type"] in ["STACKED_LINE"]:
-                                                   Include this widget entire data in the next step
-                                     d. After step 2.c: For each selected widget, **call `executeFoxtrotQuery`** with the complete widget data.
-                                       i. Check if there is a huge deviation from usual values.
-                                       ii. For these metrics, send the title of the widget which is having the issue in the query to vectorDB
-                                       iii. For these metrics, send the title of the widget which is having the issue in the query to slackTool
-                             Step 3. Combine all the above results and return response in following manner:
+                           You are a debugging agent. You need to find the root cause of the issue and provide a solution.
+                           You can use other agents to achieve this.
+                           Extract the `startTime` and `endTime` values from the `UserInput` and pass both the values to other agents as input
+                          
+                           Combine all the above results from agents and return response in following manner.
                               a. Service level degradation:
                                    a. Server_api which are degraded and the deviation values along with root cause from rca tool
-                                   b. DB sharding shards which are degraded and the deviation values
                               b. Business level degradation
                                    (i). Metrics which are anomalous. Show the usual values and the current value with the deviation
                                    (ii). Vector DB and slack insights along with relevant links or dashboards
-                            """,
-                    agentSetup, extensions, tools);
+                          
+                          """,
+                    setup,
+                    extensions,
+                    Map.of());
         }
 
         @Override
         public String name() {
-            return "base-agent";
-        }
-
-        @Tool("Tool to search slack messages")
-        @SneakyThrows
-        public List<SlackContent> slackSearchTool(final String query) throws NoSuchAlgorithmException {
-
-            TrustManager[] trustAllCerts = new TrustManager[]{
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[]{};
-                        }
-                    }
-            };
-            SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-            final var httpClient = new OkHttpClient.Builder()
-                    .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
-                    .hostnameVerifier((hostname, session) -> true)
-                    .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
-                            .removeHeader(HttpHeaders.AUTHORIZATION)
-                            .build()))
-                    .callTimeout(Duration.ofSeconds(180))
-                    .connectTimeout(Duration.ofSeconds(120))
-                    .readTimeout(Duration.ofSeconds(180))
-                    .writeTimeout(Duration.ofSeconds(120))
-                    .build();
-
-            val allResults = new ArrayList<MatchedItem>();
-            int page = 1;
-            boolean hasMore = true;
-            int limit = 50;
-            try {
-                while (hasMore) {
-                    Request request = (new Request.Builder()).url("https://slack-com.prdob.phonepe.nm5/api/search.messages?q=" + query)
-                            .header("Authorization",  "Bearer xoxb-")
-                            .build();
-                    Response response = httpClient.newCall(request).execute();
-
-                    SearchAllResponse searchAllResponse =
-                            objectMapper.readValue(response.body().bytes(), new TypeReference<>() {
-                            });
-                    if (searchAllResponse.getMessages().getTotal() > 0) {
-                        val matches = searchAllResponse.getMessages().getMatches();
-                        allResults.addAll(matches);
-                    }
-
-                    hasMore = page < searchAllResponse.getMessages().getPagination().getPageCount();
-                    page++;
-                    if (!hasMore || allResults.size() >= limit) {
-                        break;
-                    }
-
-                    // Respect rate limits
-                    Thread.sleep(500);
-                }
-            } catch (Exception e) {
-                log.error("Error while searching slack messages: {}", e.getMessage(), e);
-            }
-
-            val formattedResults = new ArrayList<SlackContent>();
-            for (val result : allResults) {
-                if (result.getChannel() == null || result.getChannel().isPrivateChannel()) {
-                    continue;
-                }
-                val formattedResult = SlackContent.builder()
-                        .channelName(result.getChannel().getName() != null ? result.getChannel().getName() : "Unknown channel")
-                        .user(result.getUsername() != null ? result.getUsername() : "Unknown user")
-                        .text(result.getText() != null ? result.getText() : "")
-                        .permalink(result.getPermalink() != null ? result.getPermalink() : "")
-                        .date(result.getTs() != null ? result.getTs().toString() : "")
-                        .dateTs(result.getTs() != null ? LocalDateTime.parse(result.getTs()) : null)
-                        .build();
-                formattedResults.add(formattedResult);
-            }
-
-            return formattedResults;
+            return "planner-agent";
         }
     }
 
-    @Test
+    @JsonClassDescription("User input")
+    public record UserInput(String data, String service, long startTime, long endTime) {
+    }
+
+
     @SneakyThrows
+    @Test
     void test() {
+        final var agentSource = new InMemoryAgentConfigurationSource();
         final var objectMapper = JsonUtils.createMapper();
         TrustManager[] trustAllCerts = new TrustManager[]{
                 new X509TrustManager() {
@@ -225,6 +133,94 @@ public class BaseAgent extends BaseTest {
                 .readTimeout(Duration.ofSeconds(180))
                 .writeTimeout(Duration.ofSeconds(120))
                 .build();
+
+        final var httpClientWithProxy = new OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
+                .hostnameVerifier((hostname, session) -> true)
+                .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
+                        .removeHeader(HttpHeaders.AUTHORIZATION)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .build()))
+                .proxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("localhost", 1080)))
+                .callTimeout(Duration.ofSeconds(180))
+                .connectTimeout(Duration.ofSeconds(120))
+                .readTimeout(Duration.ofSeconds(180))
+                .writeTimeout(Duration.ofSeconds(120))
+                .build();
+
+        final var toolSource = InMemoryHttpToolSource.builder()
+                .mapper(objectMapper)
+                .build();
+        toolSource.register("spyglass", getSpyglassTools());
+        toolSource.register("foxtrot", getFoxtrotTools());
+
+
+        Map<String, UpstreamResolver> upstreamResolvers = ImmutableMap.of(
+                "spyglass", UpstreamResolver.direct("http://plt-platdrovee227.phonepe.nbr:32425"),
+                "foxtrot", UpstreamResolver.direct("http://plt-platdrovee138.phonepe.nbr:25151")
+        );
+
+        // Function that resolves based on ID
+        Function<String, UpstreamResolver> upstreamResolver = id -> {
+            UpstreamResolver resolver = upstreamResolvers.get(id);
+            if (resolver == null) {
+                throw new IllegalArgumentException("No UpstreamResolver for id: " + id);
+            }
+            return resolver;
+        };
+
+
+        final var agentFactory = ConfiguredAgentFactory.builder()
+                .httpToolboxFactory(new HttpToolboxFactory(httpClientWithProxy,
+                        objectMapper,
+                        toolSource,
+                        upstreamResolver))
+                .mcpToolboxFactory(MCPToolBoxFactory.builder()
+                        .objectMapper(objectMapper)
+                        .clientProvider(upstream -> {
+                            throw new IllegalStateException("MCP is not supported in this test");
+                        })
+                        .build())
+                .build();
+
+
+        final var registry = AgentRegistry.<UserInput, String, PlannerAgent>builder()
+                .agentSource(agentSource)
+                .agentFactory(agentFactory::createAgent)
+                .build();
+
+        registry.configureAgent(AgentConfiguration.builder()
+                .agentName("Spyglass Agent")
+                .description("Provides the service health and the root causes for the service issues.")
+                .prompt("""
+                       For all tools, use the `startTime`, `endTime` and service values from the agent input.
+
+                        1. Run ServiceHealth tool to identify any issues with the service.
+                        2. Run RCA tool to identify the root cause for each anomalous widget
+                       """)
+                .inputSchema(loadSchema(objectMapper, "debugging_agent_input_schema.json"))
+                .outputSchema(loadSchema(objectMapper, "spyglass_agent_output_schema.json"))
+                .capability(AgentCapabilities
+                        .remoteHttpCalls(Map.of("spyglass", Set.of())))
+                .build());
+
+        registry.configureAgent(AgentConfiguration.builder()
+                .agentName("Foxtrot Agent")
+                .description("Provides business metrics for the service.")
+                .prompt("""
+                        1. Use `businessMetricWidgetTool` to fetch all business metric widgets.
+                        2. Extract all the widget data associated with "widgets" key from the above json response.
+                        3. Select the widgets using the following pseudocode logic:
+                                        for widget in widgets:
+                                           if widget["layout"]["coordinateY"] <= 10 and widget["type"] in ["STACKED_LINE"]:
+                                                   Include this widget entire data in the next step
+                        4. After step 3, For each selected widget, **call `executeFoxtrotQuery`** with the complete widget data.
+                        """)
+                .inputSchema(loadSchema(objectMapper, "debugging_agent_input_schema.json"))
+                .capability(AgentCapabilities
+                        .remoteHttpCalls(Map.of("foxtrot", Set.of())))
+                .build());
+
         final var model = new SimpleOpenAIModel(
                 "global:LLM_GLOBAL_GPT_4O_PRD",
                 SimpleOpenAI.builder()
@@ -235,30 +231,40 @@ public class BaseAgent extends BaseTest {
                         .build(),
                 objectMapper
         );
-        final var eventBus = new EventBus();
-
-        final var agent = TestAgent.builder()
-                .agentSetup(AgentSetup.builder()
-                        .mapper(objectMapper)
-                        .model(model)
-                        .modelSettings(ModelSettings.builder()
-                                .temperature(0.1f)
-                                .seed(0)
-                                .build())
-                        .eventBus(eventBus)
+        final var setup = AgentSetup.builder()
+                .mapper(objectMapper)
+                .model(model)
+                .modelSettings(ModelSettings.builder()
+                        .temperature(0f)
+                        .seed(0)
+                        .parallelToolCalls(false)
                         .build())
-                .tools(Map.of())
                 .build();
+        final var topAgent = PlannerAgent.builder()
+                .setup(setup)
+                .extension(registry)
+                .build();
+        final var response = topAgent.executeAsync(AgentInput.<UserInput>builder()
+                .request(new UserInput("""
+                        Figure out the issue with the payment service.
+                        """, "payment",
+                        1753328100000L, 1753328411000L))
+                        .build())
+                .join();
+        log.info("Agent response: {}", objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(response.getData()));
+    }
 
+    private List<TemplatizedHttpTool> getSpyglassTools() {
         final var tool = TemplatizedHttpTool.builder()
                 .metadata(HttpToolMetadata.builder() //Create tool metadata
                         .name("serviceHealthTool")
                         .description("Get service status")
                         .parameters(Map.of( //Define parameters for the tool
                                 "start", new HttpToolMetadata.HttpToolParameterMeta(
-                                        "Start time specified in the input", STRING),
+                                        "Start time specified in the agent input", STRING),
                                 "end", new HttpToolMetadata.HttpToolParameterMeta(
-                                        "End time specified in the input", STRING),
+                                        "End time specified in the agent input", STRING),
                                 "service", new HttpToolMetadata.HttpToolParameterMeta(
                                         "Service name specified in input", STRING)))
                         .build())
@@ -325,9 +331,9 @@ public class BaseAgent extends BaseTest {
                         .description("Get RCA of a widget")
                         .parameters(Map.of( //Define parameters for the tool
                                 "start", new HttpToolMetadata.HttpToolParameterMeta(
-                                        "Start time specified in the input", STRING),
+                                        "Start time specified in the agent input", STRING),
                                 "end", new HttpToolMetadata.HttpToolParameterMeta(
-                                        "End time specified in the input", STRING),
+                                        "End time specified in the agent input", STRING),
                                 "service", new HttpToolMetadata.HttpToolParameterMeta(
                                         "Service name specified in input", STRING),
                                 "name", new HttpToolMetadata.HttpToolParameterMeta(
@@ -393,108 +399,10 @@ public class BaseAgent extends BaseTest {
                                 """)
                         .build())
                 .build();
-
-        final var toolSource = InMemoryHttpToolSource.builder()
-                .mapper(objectMapper)
-                .build()
-                .register("spyglass", tool, rcaTool);
-
-        final var spyglassToolBox = new HttpToolBox("spyglass",
-                httpClientWithProxy,
-                toolSource,
-                JsonUtils.createMapper(),
-                "http://plt-platdrovee227.phonepe.nbr:32425");
-
-        final var foxtrotToolBox = new HttpToolBox("foxtrot",
-                httpClientWithProxy, getFoxtrotToolSource(),
-                JsonUtils.createMapper(),
-                "http://plt-platdrovee138.phonepe.nbr:25151");
-
-
-        final OkHttpClient stageHttpClient = new OkHttpClient.Builder()
-                .hostnameVerifier((hostname, session) -> true)
-                .addInterceptor(chain -> chain.proceed(chain.request().newBuilder()
-                        .removeHeader(HttpHeaders.AUTHORIZATION)
-                        .header(HttpHeaders.AUTHORIZATION, STAGE_AUTH_HEADER)
-                        .build()))
-                .callTimeout(Duration.ofSeconds(180))
-                .connectTimeout(Duration.ofSeconds(120))
-                .readTimeout(Duration.ofSeconds(180))
-                .writeTimeout(Duration.ofSeconds(120))
-                .build();
-
-        final var vectorDBToolBox = new HttpToolBox("vectorDB",
-                stageHttpClient, getVectorDBSource(),
-                JsonUtils.createMapper(),
-                "http://severus.nixy.stg-drove.phonepe.nb6");
-
-        agent.registerToolboxes(List.of(vectorDBToolBox, spyglassToolBox, foxtrotToolBox));
-
-
-        final var requestMetadata = AgentRequestMetadata.builder()
-                .sessionId("s1")
-                .userId("ss")
-                .build();
-        final var response = agent.execute(AgentInput.<UserInput>builder()
-                .request(new UserInput("""
-                        Payment service health
-                        """, "payment",
-                        1752203709000L, 1752204009000L))
-                .requestMetadata(requestMetadata)
-                .build());
-
-        log.info("Response: {}", response.getData());
+        return List.of(tool, rcaTool);
     }
 
-    private InMemoryHttpToolSource getVectorDBSource() {
-        final var searchTool = TemplatizedHttpTool.builder()
-                .metadata(HttpToolMetadata.builder() //Create tool metadata
-                        .name("vectorDBTool")
-                        .description("Tool for querying vector DB")
-                        .parameters(Map.of( //Define parameters for the tool
-                                "query", new HttpToolMetadata.HttpToolParameterMeta(
-                                        "Query for vectorDB", STRING)))
-                        .build())
-                .template(HttpCallTemplate.builder()
-                        .method(HttpCallSpec.HttpMethod.POST)
-                        .path(HttpCallTemplate.Template.text("/v1/collection/test/search/DC_TEST_AGENTHUB_MAY_2_STG"))
-                        .body(HttpCallTemplate.Template.textSubstitutor("{" +
-                                "\"query\": {" +
-                                "\"type\": \"KNN\"," +
-                                "\"field\": \"text\"," +
-                                "\"embed\": true," +
-                                "\"value\": \"${query}\"," +
-                                "\"k\": 10," +
-                                "\"numCandidates\": 10000," +
-                                "\"boost\": 100.0," +
-                                "\"subQuery\": {" +
-                                "\"type\": \"BOOL\"," +
-                                "\"filterClauses\": [{" +
-                                "\"type\": \"TERMS\"," +
-                                "\"field\": \"metadata.source_id\"," +
-                                "\"values\": [\"fa8c970a74d187435234\"]" +
-                                "}]," +
-                                "\"mustClauses\": [{" +
-                                "\"type\": \"MATCH\"," +
-                                "\"field\": \"text\"," +
-                                "\"value\": \"${query}\"" +
-                                "}]" +
-                                "}," +
-                                "\"limit\": 5" +
-                                "}}"))
-                        .contentType("application/json")
-                        .headers(Map.of(
-                                "Accept", List.of(HttpCallTemplate.Template.text("application/json")),
-                                "Authorization", List.of(HttpCallTemplate.Template.textSubstitutor(STAGE_AUTH_HEADER))))
-                        .build())
-                .build();
-        return InMemoryHttpToolSource.builder()
-                .mapper(objectMapper)
-                .build()
-                .register("vectorDB", searchTool);
-    }
-
-    private InMemoryHttpToolSource getFoxtrotToolSource() {
+    private List<TemplatizedHttpTool> getFoxtrotTools() {
         final var widgetTool = TemplatizedHttpTool.builder()
                 .metadata(HttpToolMetadata.builder() //Create tool metadata
                         .name("businessMetricWidgetTool")
@@ -509,13 +417,10 @@ public class BaseAgent extends BaseTest {
                                 "Authorization", List.of(HttpCallTemplate.Template.textSubstitutor(AUTH_HEADER))))
                         .build())
                 .build();
-
-
         HandlebarHelper.registerHelper("getQuery", (context, options) ->
                 getQuery(context.toString(),
                         options.param(0),
                         options.param(1)));
-
         val templateString = """
                 {{{getQuery widget start end}}}
                 """;
@@ -542,17 +447,8 @@ public class BaseAgent extends BaseTest {
                                 "Authorization", List.of(HttpCallTemplate.Template.textSubstitutor(AUTH_HEADER))))
                         .build())
                 .build();
-
-        return InMemoryHttpToolSource.builder()
-                .mapper(objectMapper)
-                .build()
-                .register("foxtrot", widgetTool, queryTool);
+        return List.of(widgetTool, queryTool);
     }
-
-    private String test(Object o) {
-        return "hey";
-    }
-
 
     private String getQuery(final String widget,
                             final long start,
@@ -612,5 +508,13 @@ public class BaseAgent extends BaseTest {
             log.error("Error processing widget data", e);
         }
         return null;
+    }
+
+
+    @SneakyThrows
+    private JsonNode loadSchema(ObjectMapper mapper, String schemaFilename) {
+        val jsonNode = mapper.readTree(Files.readString(Path.of(Objects.requireNonNull(getClass().getResource(
+                "/schema/%s".formatted(schemaFilename))).toURI())));
+        return jsonNode;
     }
 }

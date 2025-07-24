@@ -79,11 +79,8 @@ import java.util.Set;
 @Slf4j
 public class DebuggingAgentTest {
 
-    private static final String AUTH_HEADER =
-            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiMmIyZTg4ZDktZDMwNS00N2JkLTk1M2UtYmI2YjJlOWIzY2Y5Iiwic2lkIjoiNzdjNzhjYWItODYzNy00ZDkxLThiMWYtOTJjZWUzYjM5NWQ4IiwiaWF0IjoxNzQ1ODU2NDAzLCJleHAiOjE3NDU5NDI4MDJ9.8uFiyjLUDJZmMcJNfdv2gDKgmckQn8HkgiQEpZxhFuiJm9NBIXy-NM-UPKKXjVQkXr9ek98oTs8735kqO8yXEw";
-    private static final String STAGE_AUTH_HEADER =
-            "O-Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJpZGVudGl0eU1hbmFnZXIiLCJ2ZXJzaW9uIjoiNC4wIiwidGlkIjoiYzJmMTdkY2EtYzIyNi00YmEzLWIwMTgtYjUxOGEzYmZhOTJkIiwic2lkIjoiNWE1YjQ1MTgtYjAwMC00ZjQ3LWIwNGYtZGQ5OWY4YTNjM2QyIiwiaWF0IjoxNzQ1NzY1NDY4LCJleHAiOjE3NDYzNzAyNjh9.rpYdeMNEplTMQIaAZBBD8MLrTFUWYXUKWnh8sb8UGvJ1ijNzWXD0vB7z72CKDlOMOAYVLRnA9NLlGOjdYFRe6A";
-
+    private static final String AUTH_HEADER = "";
+    private static final String STAGE_AUTH_HEADER = "";
     private static OkHttpClient httpClientWithProxy;
     private static final ObjectMapper objectMapper = JsonUtils.createMapper();
 
@@ -142,7 +139,7 @@ public class DebuggingAgentTest {
 
 
         @Builder
-        public TestAgent(@NonNull AgentSetup agentSetup, List<AgentExtension> extensions, Map<String, ExecutableTool> tools) {
+        public TestAgent(@NonNull AgentSetup agentSetup, List<AgentExtension<UserInput, String, TestAgent>> extensions, Map<String, ExecutableTool> tools) {
             super(String.class,
                     """
                             You are a debugging agent. Here are the list of tasks which you need to perform

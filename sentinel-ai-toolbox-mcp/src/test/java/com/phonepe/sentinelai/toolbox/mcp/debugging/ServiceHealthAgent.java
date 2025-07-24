@@ -42,6 +42,11 @@ public class ServiceHealthAgent extends BaseTest implements ToolBox {
         super.setup();
     }
 
+    @Override
+    public String name() {
+        return "";
+    }
+
     @JsonClassDescription("User input")
     public record UserInput(String data, String service, long start, long end) {
     }
